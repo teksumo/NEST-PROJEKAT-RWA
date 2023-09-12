@@ -1,9 +1,13 @@
 import { Column, Entity, PrimaryGeneratedColumn, OneToMany, ManyToMany, ManyToOne } from "typeorm";
-import { IsInt, IsString, Length, Min } from "class-validator";
+import { IsEnum, IsInt, IsString, Length, Min } from "class-validator";
 import { Images } from "./image.entity";
 import { User } from "./user.entity";
 import { Messages } from "./message.entity";
 
+export enum TypeOfMeal {
+    SLATKO = 'SLATKO',
+    SLANO = 'SLANO'
+}
 
 @Entity()
 export class Recepti {
@@ -16,7 +20,7 @@ export class Recepti {
     @Length(1, 100)
     name: string
 
-    @Column({ name: "publication_date" })
+    @Column({ name: "publicationDate" })
     publicationDate: Date
 
     @Column({ name: "number_of_ingredients" })
@@ -31,13 +35,15 @@ export class Recepti {
     numberOfReviews: number
 
     @Column({ name: "type_of_meal" })
-    typeOfMeal: TypeOfMeal
+    @IsEnum(TypeOfMeal)
+    typeOfMeal: TypeOfMeal;
 
     @Column({ name: "created_at", default: () => "NOW()" })
     createdAt: Date
 
     @Column({ name: "updated_at", default: () => "NOW()" })
     updatedAt: Date
+
 
     @OneToMany(() => Images, image => image.recept)
     images: Images[]
@@ -55,15 +61,8 @@ export class Recepti {
     //moze da postoji vise poruka za jedan recept, a svaka poruka pripada samo jednom receptu
     
    
-    
-
-
-
 
 
 }
 
-enum TypeOfMeal {
-    SLATKO,
-    SLANO
-}
+
