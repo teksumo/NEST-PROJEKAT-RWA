@@ -6,7 +6,7 @@ import { Messages } from "./message.entity";
 
 export enum TypeOfMeal {
     SLATKO = 'SLATKO',
-    SLANO = 'SLANO'
+SLANO = 'SLANO'
 }
 
 @Entity()
@@ -45,7 +45,7 @@ export class Recepti {
     updatedAt: Date
 
 
-    @OneToMany(() => Images, image => image.recept)
+    @OneToMany(() => Images, image => image.recept, { cascade: true })
     images: Images[]
 
     @Column({ name: "kuvar_id" })
@@ -55,7 +55,7 @@ export class Recepti {
     kuvar: User
 
     //veza sa porukama
-    @OneToMany(() => Messages, message => message.recept)
+    @OneToMany(() => Messages, message => message.recept, { cascade: true })
     message?: Messages[]
 
     //moze da postoji vise poruka za jedan recept, a svaka poruka pripada samo jednom receptu

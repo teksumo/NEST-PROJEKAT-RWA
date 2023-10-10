@@ -20,6 +20,9 @@ export class Images {
     @Column({ name: "updated_at", default: () => "NOW()" })
     updatedAt: Date
 
+    @Column({ nullable: true })
+    receptIdBroj: number
+
     @ManyToOne(() => Recepti, recept => recept.images)
     recept: Recepti
 }

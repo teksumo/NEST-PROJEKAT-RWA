@@ -26,7 +26,7 @@ export class Messages {
     //mora u messages da postoji many to one, a u recepti one to many
 
     //veza messages sa recept
-    @ManyToOne(() => Recepti, recept => recept.message)
+    @ManyToOne(() => Recepti, recept => recept.message,)
     recept?: Recepti
 
     @Column({ name: "kuvar_Id" })
@@ -36,12 +36,14 @@ export class Messages {
     korisnikId: number
 
   // Veza sa posiljaocem
-  @ManyToOne(() => User, user => user.poslatePoruke)
+  @ManyToOne(() => User, user => user.poslatePoruke) // ovde nema cascade jer ne zelimo brisanje korisnika kada se poruke brisu
   posiljalac: User
 
   // Veza sa primalcem
   @ManyToOne(() => User, user => user.primljenePoruke)
   primalac: User
+
+  //poruke se brisu kada se recepti ili korisnici obrisu
 
  
 

@@ -46,16 +46,16 @@ export abstract class User {
 
 
 
-    @OneToMany(() => Recepti, recept => recept.kuvar)
+    @OneToMany(() => Recepti, recept => recept.kuvar, { cascade: ['remove'] })
     recepti: Recepti[]
 
 
       // Veza sa poslatim porukama
-  @OneToMany(() => Messages, message => message.posiljalac)
+  @OneToMany(() => Messages, message => message.posiljalac, { cascade: true })
   poslatePoruke: Messages[] //mozda ovo treba da se zove kuvar messages i korisnik messages DA PROVERIM SVE!
 
   // Veza sa primljenim porukama
-  @OneToMany(() => Messages, message => message.primalac)
+  @OneToMany(() => Messages, message => message.primalac, { cascade: true })
   primljenePoruke: Messages[]
 
 }

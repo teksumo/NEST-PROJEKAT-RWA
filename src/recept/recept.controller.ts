@@ -1,6 +1,9 @@
-import { Body, Controller, Delete, Get, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
 import { ReceptService } from './recept.service';
-import { CreateReceptDto, ReceptiResponseDto } from './dto/recept.dto';
+import { CreateReceptDto, ReceptiResponseDto, UpdateReceptDto } from './dto/recept.dto';
+import { TypeOfMeal } from 'src/entities/recept.entity';
+import { max } from 'class-validator';
+import { Between } from 'typeorm';
 
 @Controller('recept')
 export class ReceptController {
@@ -8,9 +11,41 @@ export class ReceptController {
     constructor(private readonly receptiService: ReceptService){}
 
     @Get()
-    getRecepti(): Promise<ReceptiResponseDto[]>{
+    getRecepti( 
+        @Query('typeOfMeal') typeOfMeal?: TypeOfMeal,
+        @Query('minRating') minRating?: string ,
+        @Query('maxRating') maxRating?: string,
+        @Query('numberOfIngredients') numberOfIngredients1?: string
+    ): Promise<ReceptiResponseDto[]>{
 
-        return this.receptiService.getRecepti();
+
+        var minimalno=0;
+        var maximalno=10;
+        
+        
+        console.log(minRating)
+
+        if(minRating){
+            minimalno=parseInt(minRating);
+        }
+        if(maxRating){
+            maximalno=parseInt(maxRating);
+        }
+       
+        if(numberOfIngredients1){
+        var numberOfIngredients = parseInt(numberOfIngredients1);
+        }
+        
+        const filters= {
+          typeOfMeal,
+         
+          rating: Between(minimalno, maximalno),
+          numberOfIngredients,
+          
+        }
+
+
+        return this.receptiService.getRecepti(filters);
     }
 
     
@@ -26,14 +61,20 @@ export class ReceptController {
     }
 
     @Put(':id')
-    updateRecept(){
-        return {}
+    updateRecept(
+        @Param("id", ParseIntPipe) id: number,
+        @Body() body: UpdateReceptDto
+    ){
+        return this.receptiService.updateHomeById(id,body)
     }
 
     @Delete(':id')
-    deleteRecept(){
+    deleteRecept(
+        @Param('id', ParseIntPipe) id: number
+    ){
 
 
+        this.receptiService.deleteReceptById(id);
     }
 
     

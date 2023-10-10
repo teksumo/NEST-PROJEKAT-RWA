@@ -1,12 +1,25 @@
 
 import { Exclude, Type } from "class-transformer";
-import { IsArray, IsDate, IsEnum, IsNotEmpty, IsNumber, IsPositive, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsDate, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, ValidateNested } from "class-validator";
 import { TypeOfMeal } from "src/entities/recept.entity";
 
 export class ReceptiResponseDto {
 
-    @Exclude()
-    numberOfReviews: number;
+    //excludovacemo neke stvari koje necemo da se prikazuju kad se gettuju homes
+        id: number;
+        name: string;
+        publicationDate: Date;
+        numberOfIngredients: number;
+        rating: number;
+        numberOfReviews: number;
+        typeOfMeal: TypeOfMeal;
+        @Exclude()
+        createdAt: Date;
+        @Exclude()
+        updatedAt: Date;
+
+        @Exclude()
+        kuvarId: number;
 
 
     constructor(partial: Partial <ReceptiResponseDto>){
@@ -16,8 +29,12 @@ export class ReceptiResponseDto {
 }
 
 class Image {
+    @IsString()
+    @IsNotEmpty()
     url: string 
 }
+
+
 
 
 export class CreateReceptDto{
@@ -43,6 +60,36 @@ export class CreateReceptDto{
 
     @IsNumber()
     kuvar_id:number
+
+}
+
+
+export class UpdateReceptDto
+{
+
+    @IsOptional()
+    @IsString()
+    @IsNotEmpty()
+    name?: string;
+    
+    @IsOptional()
+    @IsDate()
+    publicationDate?: Date
+
+    @IsOptional()
+    @IsNumber()
+    @IsPositive()
+    numberOfIngredients?: number
+
+    @IsOptional()
+    @IsEnum(TypeOfMeal)
+    typeOfMeal?: TypeOfMeal;
+
+// za images cemo da napravimo novi endpoint
+
+    @IsOptional()
+    @IsNumber()
+    kuvar_id?:number
 
 }
 
