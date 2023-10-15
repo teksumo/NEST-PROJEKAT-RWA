@@ -6,6 +6,7 @@ import { FindManyOptions, In, NumericType, Repository, LessThanOrEqual, MoreThan
 import { ReceptiResponseDto } from './dto/recept.dto';
 import { Images } from 'src/entities/image.entity';
 import { Messages } from 'src/entities/message.entity';
+import { MessagesService } from 'src/messages/messages.service';
 
 
 interface CreateReceptParams {
@@ -49,7 +50,9 @@ export class ReceptService {
 
     constructor ( @InjectRepository(Recepti) private readonly receptiRepository: Repository<Recepti>,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
-    @InjectRepository(Images) private readonly imagesRepository: Repository<Images>){}
+    @InjectRepository(Images) private readonly imagesRepository: Repository<Images>,
+    @InjectRepository(Messages) private readonly messagesRepository: Repository<Messages>,
+    private messagesService: MessagesService){}
 
    
 
@@ -117,8 +120,6 @@ export class ReceptService {
                     recept: true 
                 }
             })
-            console.log(images)
-            
             
             if (!kuvar) throw new NotFoundException("Kuvar with given id doesnt exist")
             if (!images) throw new NotFoundException("You must provides valid images for this recipe")
@@ -132,6 +133,7 @@ export class ReceptService {
             newRecept.images=images;
 
 
+            
 
             await this.receptiRepository.save(newRecept);
            
@@ -145,6 +147,7 @@ export class ReceptService {
             })
             await this.imagesRepository.save(images);
             await this.userRepository.save(kuvar);
+            
         }
         catch (err) {
             throw new Error(err)
@@ -155,7 +158,7 @@ export class ReceptService {
     }
 
 
-    async updateHomeById(id: number, data: UpdateReceptParams){
+    async updateReceptById(id: number, data: UpdateReceptParams){
 
         try{
         let recept = await this.receptiRepository.findOneBy({ id })
@@ -163,6 +166,8 @@ export class ReceptService {
         if(!recept){
             throw new NotFoundException( "Recept with given id doesn't exist");
         }
+
+        
 
         recept = {
             ...recept,
@@ -214,6 +219,7 @@ export class ReceptService {
               throw new Error(`Recept sa ID-om ${id} nije pronađen kod korisnika.`);
             }
 
+            /*
             //ODAVDE JE BRISANJE USERA, I SVIH RECEPATA I IMAGES SA TAJ RECEPT
            
             const slikee = await this.imagesRepository.find({ where: { receptIdBroj: id } });
@@ -226,16 +232,16 @@ export class ReceptService {
 
             //DO OVDE, to treba da premestim u user service
       
-
+*/
             
-            //BRISANJE RECEPTA NASTAVAK
-            //TREBA PORUKE DA SE IZBRISU, ali onda mora i iz user-a da se izbrisu sve te poruke
-            //koje su bile vezane za ovaj recept. Znaci da cu iz ovog service-a morati da 
-            //pozovem funkciju iz message servica, koji ce da brise poruke sa ID recepta
+        
+            //BRISANJE SVIH poruka vezanih za ovaj recept u svim entitetima
+            await this.messagesService.deleteMessagesByReceptId(id);
+
 
             //brisanje slika povezanih sa brisanim receptom
             const slike = await this.imagesRepository.find({ where: { receptIdBroj: id } });
-            await this.imagesRepository.remove(slike);
+            await this.imagesRepository.remove(slike)
             
             // Uklanjamo recept iz niza recepata korisnika
             user.recepti.splice(receptIndex, 1);
@@ -251,67 +257,5 @@ export class ReceptService {
           }
         }
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        /*
-        try{
-
-            const recept: Recepti = await this.receptiRepository.findOne({
-                where:{
-                    id
-                },
-                relations:{
-
-
-                    kuvar: true,
-                    images:true,
-                    message:true
-                },
-                select: {
-                    id: true,
-                    publicationDate: true,
-                    numberOfIngredients: true,
-                    rating: true,
-                    numberOfReviews: true,
-                    kuvar:{
-                        id:true
-                    },
-                    images:{
-
-                        url:true
-
-                    },
-                    message:{
-                        id: true
-                    }
-                }
-            })
-
-            if(!recept) throw new NotFoundException("Recept with given id doesn't exist");
-
-
-            //prikupljam sve slike i poruke koje su vezane za ovaj recept
-            const slike: Images[] = recept.images;
-            const poruke: Messages[] = recept.message;
-
-            for(const sl of slike){
-                
-            }
-        }
-        catch(err){
-            console.log(err)
-        }
-        
-    }
-    */
+     
 }

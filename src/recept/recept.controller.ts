@@ -65,7 +65,7 @@ export class ReceptController {
         @Param("id", ParseIntPipe) id: number,
         @Body() body: UpdateReceptDto
     ){
-        return this.receptiService.updateHomeById(id,body)
+        return this.receptiService.updateReceptById(id,body)
     }
 
     @Delete(':id')
