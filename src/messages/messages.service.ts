@@ -38,6 +38,7 @@ export class MessagesService {
               
           });
       
+          
           // Brišemo poruke
           await this.messagesRepository.remove(poruke);
 
@@ -47,6 +48,7 @@ export class MessagesService {
         const prviCovek = await this.userRepository.findOne({
             where: {
                 id: poruka.kuvarId
+                
             },
             relations: {
                 poslatePoruke: true,
@@ -103,10 +105,123 @@ export class MessagesService {
       }
 
 
+
+      async deleteMessageById(messageId: number) {
+        try {
+          // Pronađite poruku koju želite da izbrišete
+          const poruka = await this.messagesRepository.findOne({
+            where: {
+                id: messageId,
+              },
+              relations: {
+                primalac: true,
+                posiljalac: true,
+                recept: true
+                
+              }
+              
+          });
+
+          if (!poruka) {
+            throw new Error("Poruka ne postoji.");
+          }
+      
+          
+          // Pronađite recept povezan sa porukom
+          const recept = await this.receptiRepository.findOne({
+            where: {
+                id: poruka.recept_id,
+              },
+              relations: {
+                message: true
+              }
+              
+          });
+
+
+          if (!recept) {
+            throw new Error("Recept ne postoji.");
+          }
+      
+          // Brišemo poruku
+          await this.messagesRepository.remove(poruka);
+      
+          // Ažurirajte vezu u receptu tako da se poruka ukloni
+          if (recept.message) {
+            recept.message = recept.message.filter((m) => m.id !== messageId);
+             await this.receptiRepository.save(recept);
+          }
+      
+          const prviCovek = await this.userRepository.findOne({
+            where: {
+                id: poruka.kuvarId
+                
+            },
+            relations: {
+                poslatePoruke: true,
+                primljenePoruke: true,
+            }
+        });
+        const drugiCovek = await this.userRepository.findOne({
+            where: {
+                id: poruka.korisnikId
+            },
+            relations: {
+                primljenePoruke: true,
+                poslatePoruke: true
+            }
+        });
+        console.log(prviCovek.poslatePoruke)
+        
+        console.log("wdadwadawdawdawdawdwa")
+  
+        //brisanje svih primljenih poruka iz prvogCoveka sa id poruke koja se brise
+        if (prviCovek && prviCovek.primljenePoruke) {
+            prviCovek.primljenePoruke = prviCovek.primljenePoruke.filter(
+            (p) => p.id !== poruka.id
+          );
+          await this.userRepository.save(prviCovek);
+        }
+
+        //brisanje svih poslatih poruka iz prvogCoveka sa id poruke koja se brise
+        if (prviCovek && prviCovek.poslatePoruke) {
+            prviCovek.poslatePoruke = prviCovek.poslatePoruke.filter(
+              (p) => p.id !== poruka.id
+            );
+            await this.userRepository.save(prviCovek);
+          }
+  
+
+        //brisanje svih poslatih poruka iz drugogCoveka sa id poruke koja se brise  
+        if (drugiCovek && drugiCovek.poslatePoruke) {
+            drugiCovek.poslatePoruke = drugiCovek.poslatePoruke.filter(
+            (p) => p.id !== poruka.id
+          );
+          await this.userRepository.save(drugiCovek);
+        }
+
+        //brisanje svih primljenih poruka iz drugogCoveka sa id poruke koja se brise
+        if (drugiCovek && drugiCovek.primljenePoruke) {
+            drugiCovek.primljenePoruke = drugiCovek.primljenePoruke.filter(
+            (p) => p.id !== poruka.id
+          );
+          await this.userRepository.save(drugiCovek);
+        }
+
+        console.log(drugiCovek.primljenePoruke)
+
+        
+        } catch (error) {
+          console.log(error);
+        }
+      }
+
+
       async createMessage(body: CreateMessageParams){
 
         try {
             const a = body.kuvarId;
+           
             const kuvar: User = await this.userRepository.findOne({
                 where: {
                     id: In([a])
@@ -116,6 +231,7 @@ export class MessagesService {
                 }
             })
 
+            
 
             const b = body.korisnikId;
             const korisnik: User = await this.userRepository.findOne({
@@ -161,6 +277,7 @@ export class MessagesService {
                 
             })
 
+            
             
             if (recept.kuvar.id !== recept.kuvarId) {
                 throw new Error(`Recept sa ID-om ${body.recept_id} nije povezan sa kuvarom.`);

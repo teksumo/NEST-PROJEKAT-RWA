@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, NotFoundException, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
 import { ReceptService } from './recept.service';
 import { CreateReceptDto, ReceptiResponseDto, UpdateReceptDto } from './dto/recept.dto';
 import { TypeOfMeal } from 'src/entities/recept.entity';
@@ -77,6 +77,18 @@ export class ReceptController {
         this.receptiService.deleteReceptById(id);
     }
 
-    
+    @Post('/dodaj-sliku/:receptId/:imageUrl') // Dodali smo imageUrl kao parametar rute
+    async dodajSlikuZaRecept(
+      @Param("receptId", ParseIntPipe) receptId: number,
+      @Param('imageUrl') imageUrl: string, // Dohvatili smo imageUrl iz rute
+  ) {
+    const azuriraniRecept = await this.receptiService.dodajSlikuZaRecept(receptId, imageUrl);
+
+  }
+
+  @Delete('/obrisi-sliku/:imageId')
+  async obrisiSlikuZaRecept(@Param('imageId') imageId: number) {
+    await this.receptiService.obrisiSlikuZaRecept(imageId);
+  }
 
 }

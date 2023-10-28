@@ -18,4 +18,10 @@ export class MessagesController {
 
         return this.messagesService.deleteMessagesByReceptId(id);
     }
+
+    @Delete('/deleteMessage/:id')
+    deleteMessageById(@Param('id', ParseIntPipe) id: number){
+
+        return this.messagesService.deleteMessageById(id);
+    }
 }

@@ -256,6 +256,92 @@ export class ReceptService {
             console.log(error)
           }
         }
+
+
+        async dodajSlikuZaRecept(receptId: number, imageUrl: string) {
+            // Pronađite recept koji želite da ažurirate
+            const recept = await this.receptiRepository.findOne({
+                where: {
+                    id: receptId
+                    
+                },
+                relations: {
+                    images: true
+                }
+            });
+            
+            if (!recept) {
+              throw new NotFoundException('Recept nije pronađen');
+            }
+        
+            // Kreiranje nove slike
+            const novaSlika = new Images();
+            novaSlika.url = imageUrl;
+            novaSlika.recept=recept;
+            novaSlika.receptIdBroj=receptId;
+            
+        
+            // cuvanje slike u bazi podataka
+            const sacuvanaSlika = await this.imagesRepository.save(novaSlika);
+        
+            // Poveyivanje slike sa receptom
+            recept.images.push(sacuvanaSlika);
+        
+            // Sačuvajte ažurirani recept
+            const azuriraniRecept = await this.receptiRepository.save(recept);
+        
+            return azuriraniRecept;
+          }
+
+
+          
+
+          //BRISANJE JEDNE SLIKE
+          async obrisiSlikuZaRecept(imageId: number): Promise<void> {
+            // Provera da li slika postoji
+            const slika = await this.imagesRepository.findOne({
+                where: {
+                    id: imageId
+                    
+                },
+                relations: {
+                    recept: true
+                }
+            });
+        
+            if (!slika) {
+              throw new NotFoundException('Slika nije pronađena');
+            }
+        
+            // Proverite da li slika pripada nekom receptu
+            if (slika.recept) {
+              // Pronađite recept koji ima referencu na ovu sliku
+              const recept = await this.receptiRepository.findOne({
+                where: {
+                    id: slika.recept.id
+                    
+                },
+                relations: {
+                    images: true
+                }
+            });
+
+            console.log("recept pre BRISANJE SLIKE")
+            console.log(recept)
+        
+              if (recept) {
+                // Uklonite sliku iz recepta
+                recept.images = recept.images.filter(img => img.id !== imageId);
+                await this.receptiRepository.save(recept);
+              }
+
+              console.log("recept posle BRISANJE SLIKE")
+              console.log(recept)
+            }
+        
+            // Obrišite sliku
+            await this.imagesRepository.remove(slika);
+          }
         
      
 }
