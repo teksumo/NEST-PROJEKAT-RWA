@@ -76,7 +76,7 @@ export class AuthService {
               //sad uzimamo id od usera da bi to predali JWT-u da napravi token
               const existingUser2 = await this.userRepository.findOne({  where: { email: body.email } });
               const id=existingUser2.id;
-              console.log(existingUser2)
+              
 
               return this.generateJWT(id, body.firstName, body.email, body.userType);    
               
@@ -138,7 +138,7 @@ export class AuthService {
       if(id!=id_korisnika_koji_brise){
         throw new ConflictException ('Ne mozes da brises tudji nalog!');
       }
-      
+
       const existingUser = await this.userRepository.findOne({
         where: {
             id: id

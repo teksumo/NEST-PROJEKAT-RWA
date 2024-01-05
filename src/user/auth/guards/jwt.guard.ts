@@ -11,8 +11,10 @@ export class JwtGuard extends AuthGuard('jwt') {
     constructor(private reflector: Reflector) {
         super();
     }
+    
 
     canActivate(context: ExecutionContext) {
+        console.log("POCINJE JWT GUARD")
         const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
             context.getHandler(),   
             context.getClass()
@@ -20,6 +22,8 @@ export class JwtGuard extends AuthGuard('jwt') {
  
         //ako je ruta public onda samo vratimo true
         if (isPublic) return true
+
+        console.log("ZAVRSAVA SE JWT GUARD")
 
         return super.canActivate(context)
     }

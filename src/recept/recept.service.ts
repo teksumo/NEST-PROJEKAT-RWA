@@ -57,7 +57,7 @@ export class ReceptService {
    
 
     async getRecepti(filter: GetReceptiParams) : Promise<ReceptiResponseDto[]>{
-        console.log(filter)
+        
 
         const wheree: any = {};
 
@@ -99,7 +99,7 @@ export class ReceptService {
     async createRecept(body: CreateReceptParams, id:number){
        
         
-        console.log(body.images)
+        
 
         try {
             var id_kuvara_koji_postavlja_recept=0
@@ -331,8 +331,7 @@ export class ReceptService {
         }
     });
 
-    console.log("recept pre BRISANJE SLIKE")
-    console.log(recept)
+    
 
         if (recept) {
         // Uklonite sliku iz recepta
@@ -340,8 +339,7 @@ export class ReceptService {
         await this.receptiRepository.save(recept);
         }
 
-        console.log("recept posle BRISANJE SLIKE")
-        console.log(recept)
+        
     }
 
     // Obrišite sliku

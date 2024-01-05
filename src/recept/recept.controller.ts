@@ -31,7 +31,7 @@ export class ReceptController {
         var maximalno=10;
         
         
-        console.log(minRating)
+        
 
         if(minRating){
             minimalno=parseInt(minRating);
@@ -75,7 +75,7 @@ export class ReceptController {
     @Roles(UserType.KUVAR, UserType.ADMIN)
     @UseGuards(JwtGuard)
     //@Roles(UserType.KUVAR)
-    @Post() //ovde iza ovo @Body... treba da stoji @Request req, i onda da se iz tog req uzme user preko jwt??
+    @Post() 
     createRecept(@Body() body: CreateReceptDto, @Request() req){
         
         
@@ -107,6 +107,7 @@ export class ReceptController {
       @Param("receptId", ParseIntPipe) receptId: number,
       @Param('imageUrl') imageUrl: string, // Dohvatili smo imageUrl iz rute
     ) {
+            
             const azuriraniRecept = await this.receptiService.dodajSlikuZaRecept(receptId, imageUrl);
 
       }

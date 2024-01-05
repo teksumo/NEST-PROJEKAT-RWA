@@ -34,24 +34,9 @@ export class RolesGuard implements CanActivate {
 
     const { user } = context.switchToHttp().getRequest()
     
-    console.log(requiredRoles)
+    console.log("SAD SE ZAVESAVA ROLES GUARD")
 
-    const request = context.switchToHttp().getRequest();
-    const token = request.headers.authorization?.replace('Bearer ', '');
-
-    if (!token) {
-      return false; // If there's no token, deny access
-    }
-
- 
-    const decodedToken: any = jwt.verify(token,process.env.JSON_TOKEN_KEY);
-
-    console.log(user)
-    console.log(requiredRoles.some((role) => decodedToken?.type === role))
-    
-
-    console.log("SAD SE ZAVESAVA  ROLES GUARD")
-    return requiredRoles.some((role) => decodedToken?.type === role)
+    return requiredRoles.some((role) => user?.type === role)
 
   }
 }

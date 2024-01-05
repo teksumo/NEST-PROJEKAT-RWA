@@ -40,7 +40,7 @@ export class AuthController {
      ) {
         //radim sa req da bi se uporedio id naloga koji korisnik hoce da brise i njegov id, tako da moze samo svoj nalog da obrise
           await this.authService.deleteAccount(id, req.user.id);
-          console.log("OBRISANE PORUKE")
+          
       }
 
 
