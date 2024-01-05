@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Images } from 'src/entities/image.entity';
 import { Messages } from 'src/entities/message.entity';
@@ -165,15 +165,14 @@ export class MessagesService {
         const drugiCovek = await this.userRepository.findOne({
             where: {
                 id: poruka.korisnikId
+                
             },
             relations: {
                 primljenePoruke: true,
                 poslatePoruke: true
             }
         });
-        console.log(prviCovek.poslatePoruke)
-        
-        console.log("wdadwadawdawdawdawdwa")
+       
   
         //brisanje svih primljenih poruka iz prvogCoveka sa id poruke koja se brise
         if (prviCovek && prviCovek.primljenePoruke) {
@@ -208,13 +207,14 @@ export class MessagesService {
           await this.userRepository.save(drugiCovek);
         }
 
-        console.log(drugiCovek.primljenePoruke)
+        
 
         
         } catch (error) {
           console.log(error);
         }
       }
+
 
 
       async createMessage(body: CreateMessageParams){
@@ -312,7 +312,11 @@ export class MessagesService {
             
         }
         catch (err) {
-            throw new Error(err)
+          if (err instanceof NotFoundException || err instanceof ConflictException) {
+            throw err; // Dalje šalje grešku
+          } else {
+            throw new ConflictException('Internal Server Error'); // Prikazuje univerzalnu grešku za sve ostale izuzetke
+          }
         }
         
 

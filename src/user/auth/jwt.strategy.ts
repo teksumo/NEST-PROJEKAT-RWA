@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
+import UserType from "src/enums/UserType";
 
 
 @Injectable()
@@ -10,14 +11,17 @@ export class JwtStrategy extends PassportStrategy(Strategy){
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), //uzimamo token iz headera
             ignoreExpiration: false,
-            secretOrKey: 'test'
+            secretOrKey: process.env.JSON_TOKEN_KEY
 
         })
+        
     }
 
-    async validate (username: string, password :string) : Promise <any>{
+    async validate(payload: any){
+        
+        return { ...payload}
 
-        return "success";
     }
+
 
 }

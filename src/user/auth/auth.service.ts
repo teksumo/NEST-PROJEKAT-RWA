@@ -1,11 +1,18 @@
-import { Injectable, ConflictException, HttpException } from '@nestjs/common';
+import { Injectable, ConflictException, HttpException, HttpStatus } from '@nestjs/common';
 import { getRepository, Repository } from 'typeorm';
 import { User } from '../../entities/user.entity';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
 import * as bcrypt from "bcryptjs"
-import { UserType } from '../../entities/user.entity';
+//import { UserType } from '../../entities/user.entity';
 import { SignupDto } from '../dtos/auth.dto';
 import { JwtService } from '@nestjs/jwt';
+import UserType from 'src/enums/UserType';
+import { JwtPayload } from 'src/enums/jwtPayload.type';
+import { Messages } from 'src/entities/message.entity';
+import { MessagesService } from 'src/messages/messages.service';
+import { cpSync } from 'fs';
+import { Recepti } from 'src/entities/recept.entity';
+import { ReceptService } from 'src/recept/recept.service';
 //import UserType from '../../enums/UserType';
 
 interface SignUpParams {
@@ -26,52 +33,68 @@ interface SignInParams {
 @Injectable()
 export class AuthService {
 
-    constructor ( @InjectRepository(User) private readonly userRepository: Repository<User>,
+
+  //ovo sam dodao
     private jwtService: JwtService
+    constructor ( @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(Messages) private readonly messagesRepository: Repository<Messages>,
+    @InjectRepository(Recepti) private readonly receptiRepository: Repository<Recepti>,
+    private messagesService: MessagesService,
+    private receptiService : ReceptService
+
+    //private jwtService: JwtService
     
-    ){}
-
-    async signup(body :SignUpParams, userType: UserType ) { //sa SignUpParams i sa SignUpDto smo se osigurali da 100% user mora unese
-        //lepe podatke
-
-        
-        const existingUser = await this.userRepository.findOne({  where: { email: body.email } });
-
-        if (existingUser) {
-            throw new ConflictException ('Email koji ste uneli je vec u upotrebi.');
-          }
-
-
-        const hashedPassword = await bcrypt.hash(body.password, 10);
-        
-        body.password=hashedPassword;
-        
-          
-
-          /*if (![UserType.KUVAR, UserType.KORISNIK, UserType.ADMIN].includes(body.userType)) {
-            throw new ConflictException('Niste uneli ispravnu vrstu korisnika.');
-          } */  
-
-        
-          try {
-                await this.userRepository.create(body);
-                
-
-                await this.userRepository.save(body);
-                
-                
-                 }
-                 catch (err) {
-                            throw new Error(err)
-                }
-
-          return this.generateJWT(body.firstName, body.email);    
-
+    ){
+      //ovo sam dodao
+      this.jwtService = new JwtService()
     }
 
+    
+
+    
+    async signup(body :SignUpParams ) { //sa SignUpParams i sa SignUpDto smo se osigurali da 100% user mora unese
+      //lepe podatke
+      try {
+              
+              const existingUser = await this.userRepository.findOne({  where: { email: body.email } });
+
+              if (existingUser) {
+                  throw new ConflictException ('Email koji ste uneli je vec u upotrebi.');
+                }
+
+
+              const hashedPassword = await bcrypt.hash(body.password, 10);
+              
+              body.password=hashedPassword;
+
+       
+              await this.userRepository.create(body);
+              
+
+              await this.userRepository.save(body);
+
+              //sad uzimamo id od usera da bi to predali JWT-u da napravi token
+              const existingUser2 = await this.userRepository.findOne({  where: { email: body.email } });
+              const id=existingUser2.id;
+              console.log(existingUser2)
+
+              return this.generateJWT(id, body.firstName, body.email, body.userType);    
+              
+          }
+          catch (err) {
+              if (err instanceof HttpException) {
+                throw err ;
+              } 
+              else {
+                throw new HttpException('Neuspela registracija.', HttpStatus.INTERNAL_SERVER_ERROR);
+              }
+          }
+  
+    }
 
     async signin ({email, password}: SignInParams) {
 
+      
 
       const user = await this.userRepository.findOne({  where: { email} });
 
@@ -84,48 +107,92 @@ export class AuthService {
 
       if(!isValidPassword){
         throw new HttpException('Invalid Credentials', 400);
-        //MORAMO ISTI exceptions da bacimo, da neki zlonameran user ne bi znao dal je netacna sifra il mail
+        //MORAMO ISTI exceptions da bacimo, da neki zlonameran user ne bi znao dal je netacna sifra ili mail
       }
 
-      return this.generateJWT(user.firstName, user.email); 
+      return this.generateJWT(user.id,user.firstName, user.email, user.userType); 
 
 
     }
 
-    private generateJWT(name: string, email: string){
-      return this.jwtService.sign({
+    async generateJWT(id: number, name: string, email: string, type:UserType ){
+
+      const jwtPayload: JwtPayload = {
+        id: id,
         name,
-        email
-      })   
+        email,
+        type
+      }
+      const token=await Promise.all([
+        this.jwtService.signAsync(jwtPayload, {
+            secret: process.env.JSON_TOKEN_KEY,
+            expiresIn: "15m"
+        })])
+
+      return token
+
+    }
+
+    async deleteAccount(id:number, id_korisnika_koji_brise:number){
+
+      if(id!=id_korisnika_koji_brise){
+        throw new ConflictException ('Ne mozes da brises tudji nalog!');
+      }
+      
+      const existingUser = await this.userRepository.findOne({
+        where: {
+            id: id
+        },
+        relations: {
+            primljenePoruke: true,
+            poslatePoruke: true,
+            recepti: true
+        }
+    });
+
+      if(!existingUser){
+        throw new ConflictException ('Ne postoji nalog sa ovim id-om');
+      }
+
+        if(existingUser.userType=='KORISNIK' || existingUser.userType=='ADMIN'){
+          
+
+          //brisanje poslatih poruka
+          if (existingUser.poslatePoruke) {
+            for (const message of existingUser.poslatePoruke) {
+              // Poziv funkcije za brisanje poruke iz MessagesService
+              await this.messagesService.deleteMessageById(message.id);
+            }
+          }
+
+          //brisanje poslatih poruka
+          if (existingUser.primljenePoruke && existingUser.primljenePoruke.length > 0) {
+            for (const message of existingUser.primljenePoruke) {
+              // Poziv funkcije za brisanje poruke iz MessagesService
+              await this.messagesService.deleteMessageById(message.id);
+            }
+          }
+
+          //brisanje naloga
+          await this.userRepository.remove(existingUser)
+
+      } else{
+
+        if (existingUser.recepti) {
+          for (const recept of existingUser.recepti) {
+            // Poziv funkcije za brisanje poruka za svaki recept
+            await this.receptiService.deleteReceptById(recept.id);
+          }
+          await this.userRepository.remove(existingUser)
+        }
+
+      }
+
 
     }
 
 
-    //Posto u mojoj aplikaciji mogu da se sign upuju useri kao: Korisnik, Kuvar ili Admin,
-    //moram da napravim tako da svaki tip usera ima poseban JWT.
-    //Aplikacija je osmisljena tako da kad neko oce da se prijavi kao Kuvar, mora da kontaktira..
-    //.. admina, da mu dokaze da je kuvar, i onda da mu admin da poseban KEY s kojim ce moci da
-    //dobije account za kuvara
-
-    //funkcija kojom ce admin dodeljivati poseban key kuvaru:
-
-    generateProductKey(email: string, userType: UserType){
-      //pravimo poseban string (za svakog kuvara) koji cemo da hashujemo
-      const string = `${email}-${userType}-${process.env.PRODUCT_KEY_SECRET}`
-
-      return bcrypt.hash(string,10);
-
-      //i onda kad dobiju Kuvari ovaj token, onda mogu da se sign upuju kao kuvari, samo 
-      //proslede ovaj token i imaju dozvolu da postanu kuvar
-
-    }
-
-
-
-
-
-  
-    }
+ }
 
 
 

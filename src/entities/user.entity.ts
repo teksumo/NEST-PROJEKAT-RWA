@@ -51,12 +51,12 @@ export abstract class User {
 
 
       // Veza sa poslatim porukama
-  @OneToMany(() => Messages, message => message.posiljalac, { cascade: true })
-  poslatePoruke: Messages[] //mozda ovo treba da se zove kuvar messages i korisnik messages DA PROVERIM SVE!
+    @OneToMany(() => Messages, message => message.posiljalac, { cascade: true })
+    poslatePoruke: Messages[] //mozda ovo treba da se zove kuvar messages i korisnik messages DA PROVERIM SVE!
 
-  // Veza sa primljenim porukama
-  @OneToMany(() => Messages, message => message.primalac, { cascade: true })
-  primljenePoruke: Messages[]
+    // Veza sa primljenim porukama
+    @OneToMany(() => Messages, message => message.primalac, { cascade: true })
+    primljenePoruke: Messages[]
 
 }
 

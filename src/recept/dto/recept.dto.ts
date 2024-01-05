@@ -58,8 +58,9 @@ export class CreateReceptDto{
     @Type(()=>Image)
     images: Image[]
 
+    @IsOptional()
     @IsNumber()
-    kuvar_id:number
+    kuvar_id:number 
 
 }
 

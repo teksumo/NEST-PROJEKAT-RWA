@@ -8,14 +8,19 @@ import { AuthModule } from './user/auth/auth.module';
 import { ReceptModule } from './recept/recept.module';
 import { ImagesModule } from './images/images.module';
 import { MessagesModule } from './messages/messages.module';
+import { APP_GUARD } from '@nestjs/core';
+import { RolesGuard } from './user/auth/guards/roles.guard';
 
 
 @Module({
   imports: [TypeOrmModule.forRoot(typeOrmConfig), UserModule, AuthModule, ReceptModule, ImagesModule, MessagesModule  ],
   controllers: [AppController],
-  providers: [AppService,],
+  providers: [AppService,
+  {
+    provide: APP_GUARD,
+    useClass: RolesGuard
+  } ],
 })
 export class AppModule {}
 
 
-//mora da se authentifikuje user pri sign up

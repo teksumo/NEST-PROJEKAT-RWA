@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Recepti, TypeOfMeal } from 'src/entities/recept.entity';
 import { User } from 'src/entities/user.entity';
@@ -96,42 +96,57 @@ export class ReceptService {
 
 
 
-
-
-    async createRecept(body: CreateReceptParams){
+    async createRecept(body: CreateReceptParams, id:number){
+       
+        
         console.log(body.images)
 
         try {
-            const a = body.kuvar_id;
+            var id_kuvara_koji_postavlja_recept=0
+            if(body.kuvar_id==null){//ovo se koristi ako KUVAR dodaje recept, tad se id uzima iz JWT
+            
+                id_kuvara_koji_postavlja_recept = id;
+            }else{
+
+                id_kuvara_koji_postavlja_recept = body.kuvar_id; //ovo se koristi ukoliko admin dodaje recept,
+                //tad se id uzima iz BODY koji prosledi ADMIN, jer ako se tad uzima id iz JWT, stavice se adminov ID a treba od KUVARA
+            }
+            
+
             const kuvar: User = await this.userRepository.findOne({
                 where: {
-                    id: In([a])
+                    id: In([id_kuvara_koji_postavlja_recept])
                 },
                 relations: {
                     recepti: true
                 }
             })
+
             const urls = body.images.map(image => image.url); // izvucemo svaki url: "blabla".SAMO OVAKO RADI
-            const images: Images[] = await this.imagesRepository.find({
-                where: {
-                    url: In(urls) 
-                },
-                relations: {
-                    recept: true 
-                }
-            })
+
+            const newImages: Images[] = [];
+            for (const imageUrl of urls) {
+                const newImage: Images = new Images();
+                newImage.url = imageUrl;
+                newImage.recept = null; // Ovo se postavlja tek kada sejvujemo recept
+                newImages.push(newImage);
+            }
+
+            const savedImages = await this.imagesRepository.save(newImages);
+
+            //AKO KUVAR NIJE STAVIO NI JEDNU SLIKU jela, onda ne moze da se to postavi
+            
             
             if (!kuvar) throw new NotFoundException("Kuvar with given id doesnt exist")
-            if (!images) throw new NotFoundException("You must provides valid images for this recipe")
+            
             const newRecept: Recepti = new Recepti()
             newRecept.name = body.name;
             newRecept.publicationDate = body.publicationDate;
             newRecept.numberOfIngredients = body.numberOfIngredients;
             newRecept.typeOfMeal = body.typeOfMeal;
-            newRecept.kuvarId = body.kuvar_id;
+            newRecept.kuvarId = id_kuvara_koji_postavlja_recept;
             newRecept.kuvar= kuvar;
-            newRecept.images=images;
-
+            newRecept.images=newImages;
 
             
 
@@ -141,12 +156,17 @@ export class ReceptService {
 
             
             
-            images.forEach(image => {
-                
+           //sad dodeljujemo novokreirani recept novim slikama
+            savedImages.forEach(image => {
                 image.recept = newRecept;
-            })
-            await this.imagesRepository.save(images);
+                image.receptIdBroj=newRecept.id
+            });
+    
+            // cuvamo images i kuvara
+            await this.imagesRepository.save(savedImages);
             await this.userRepository.save(kuvar);
+
+          
             
         }
         catch (err) {
@@ -219,22 +239,7 @@ export class ReceptService {
               throw new Error(`Recept sa ID-om ${id} nije pronađen kod korisnika.`);
             }
 
-            /*
-            //ODAVDE JE BRISANJE USERA, I SVIH RECEPATA I IMAGES SA TAJ RECEPT
-           
-            const slikee = await this.imagesRepository.find({ where: { receptIdBroj: id } });
 
-            await this.imagesRepository.remove(slikee);
-            
-            await this.receptiRepository.remove(user.recepti);
-
-            await this.userRepository.remove(user)
-
-            //DO OVDE, to treba da premestim u user service
-      
-*/
-            
-        
             //BRISANJE SVIH poruka vezanih za ovaj recept u svim entitetima
             await this.messagesService.deleteMessagesByReceptId(id);
 
@@ -258,90 +263,128 @@ export class ReceptService {
         }
 
 
-        async dodajSlikuZaRecept(receptId: number, imageUrl: string) {
-            // Pronađite recept koji želite da ažurirate
-            const recept = await this.receptiRepository.findOne({
-                where: {
-                    id: receptId
-                    
-                },
-                relations: {
-                    images: true
-                }
-            });
-            
-            if (!recept) {
-              throw new NotFoundException('Recept nije pronađen');
+    async dodajSlikuZaRecept(receptId: number, imageUrl: string) {
+        // Pronađite recept koji želite da ažurirate
+        const recept = await this.receptiRepository.findOne({
+            where: {
+                id: receptId
+                
+            },
+            relations: {
+                images: true
             }
+        });
         
-            // Kreiranje nove slike
-            const novaSlika = new Images();
-            novaSlika.url = imageUrl;
-            novaSlika.recept=recept;
-            novaSlika.receptIdBroj=receptId;
-            
+        if (!recept) {
+            throw new NotFoundException('Recept nije pronađen');
+        }
+    
+        // Kreiranje nove slike
+        const novaSlika = new Images();
+        novaSlika.url = imageUrl;
+        novaSlika.recept=recept;
+        novaSlika.receptIdBroj=receptId;
         
-            // cuvanje slike u bazi podataka
-            const sacuvanaSlika = await this.imagesRepository.save(novaSlika);
-        
-            // Poveyivanje slike sa receptom
-            recept.images.push(sacuvanaSlika);
-        
-            // Sačuvajte ažurirani recept
-            const azuriraniRecept = await this.receptiRepository.save(recept);
-        
-            return azuriraniRecept;
-          }
+    
+        // cuvanje slike u bazi podataka
+        const sacuvanaSlika = await this.imagesRepository.save(novaSlika);
+    
+        // Poveyivanje slike sa receptom
+        recept.images.push(sacuvanaSlika);
+    
+        // Sačuvajte ažurirani recept
+        const azuriraniRecept = await this.receptiRepository.save(recept);
+    
+        return azuriraniRecept;
+        }
 
+
+        
+
+    //BRISANJE JEDNE SLIKE
+    async obrisiSlikuZaRecept(imageId: number): Promise<void> {
+    // Provera da li slika postoji
+    const slika = await this.imagesRepository.findOne({
+        where: {
+            id: imageId
+            
+        },
+        relations: {
+            recept: true
+        }
+    });
+
+    if (!slika) {
+        throw new NotFoundException('Slika nije pronađena');
+    }
+
+    // Proverite da li slika pripada nekom receptu
+    if (slika.recept) {
+        // Pronađite recept koji ima referencu na ovu sliku
+        const recept = await this.receptiRepository.findOne({
+        where: {
+            id: slika.recept.id
+            
+        },
+        relations: {
+            images: true
+        }
+    });
+
+    console.log("recept pre BRISANJE SLIKE")
+    console.log(recept)
+
+        if (recept) {
+        // Uklonite sliku iz recepta
+        recept.images = recept.images.filter(img => img.id !== imageId);
+        await this.receptiRepository.save(recept);
+        }
+
+        console.log("recept posle BRISANJE SLIKE")
+        console.log(recept)
+    }
+
+    // Obrišite sliku
+    await this.imagesRepository.remove(slika);
+    }
+
+
+    async oceni(receptId:number, ocena:number){
+        const recept = await this.receptiRepository.findOne({
+            where: {
+                id: receptId
+                
+            },
+            relations: {
+                
+            }
+        });
+
+        if (!recept) {
+            throw new NotFoundException('Recept nije pronađen');
+        }
+    
+        // Provera da li je ocena unutar opsega od 1 do 5
+        if (ocena < 1 || ocena > 5) {
+            throw new BadRequestException('Ocena mora biti između 1 i 5.');
+        }
+    
+        // Ažuriranje broja ocena i izračunavanje nove ocene
+        recept.numberOfReviews += 1;
+        recept.rating = ((recept.rating * (recept.numberOfReviews - 1)) + ocena) / recept.numberOfReviews;
+    
+        // Ograničavanje ocene na opseg od 1 do 5
+        recept.rating = Math.min(5, Math.max(1, recept.rating));
+    
+        // Čuvanje promena u bazi podataka
+        await this.receptiRepository.save(recept);
+
+
+
+
+    } 
 
           
-
-          //BRISANJE JEDNE SLIKE
-          async obrisiSlikuZaRecept(imageId: number): Promise<void> {
-            // Provera da li slika postoji
-            const slika = await this.imagesRepository.findOne({
-                where: {
-                    id: imageId
-                    
-                },
-                relations: {
-                    recept: true
-                }
-            });
-        
-            if (!slika) {
-              throw new NotFoundException('Slika nije pronađena');
-            }
-        
-            // Proverite da li slika pripada nekom receptu
-            if (slika.recept) {
-              // Pronađite recept koji ima referencu na ovu sliku
-              const recept = await this.receptiRepository.findOne({
-                where: {
-                    id: slika.recept.id
-                    
-                },
-                relations: {
-                    images: true
-                }
-            });
-
-            console.log("recept pre BRISANJE SLIKE")
-            console.log(recept)
-        
-              if (recept) {
-                // Uklonite sliku iz recepta
-                recept.images = recept.images.filter(img => img.id !== imageId);
-                await this.receptiRepository.save(recept);
-              }
-
-              console.log("recept posle BRISANJE SLIKE")
-              console.log(recept)
-            }
-        
-            // Obrišite sliku
-            await this.imagesRepository.remove(slika);
-          }
         
      
 }
